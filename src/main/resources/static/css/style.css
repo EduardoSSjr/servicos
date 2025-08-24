@@ -61,3 +61,11 @@ button:hover {
 .back-link:hover {
     text-decoration: underline;
 }
+
+.btn-delete {
+    background-color: #dc3545;
+    margin-top: 10px;
+}
+.btn-delete:hover {
+    background-color: #c82333;
+}

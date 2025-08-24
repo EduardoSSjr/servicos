@@ -1,33 +1,29 @@
 package br.com.sgs.servicos.controller;
 
 import br.com.sgs.servicos.controller.dto.OrdemDeServicoRequest;
-import br.com.sgs.servicos.model.OrdemDeServico;
-import br.com.sgs.servicos.model.Prioridade;
-import br.com.sgs.servicos.model.Solicitante;
-import br.com.sgs.servicos.model.Tecnico;
+import br.com.sgs.servicos.model.*;
 import br.com.sgs.servicos.repository.OrdemDeServicoRepository;
 import br.com.sgs.servicos.repository.SolicitanteRepository;
 import br.com.sgs.servicos.repository.TecnicoRepository;
 import br.com.sgs.servicos.service.OrdemDeServicoService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.Optional;
+import java.time.LocalDateTime;
 
 @Controller
 public class AppController {
 
     @Autowired
     private OrdemDeServicoRepository ordemDeServicoRepository;
-
     @Autowired
     private SolicitanteRepository solicitanteRepository;
-
     @Autowired
     private TecnicoRepository tecnicoRepository;
-
     @Autowired
     private OrdemDeServicoService osService;
 
@@ -39,7 +35,7 @@ public class AppController {
         return mav;
     }
 
-    // --- LISTAGEM DE SOLICITANTES E TÉCNICOS ---
+    // --- LISTAGEM ---
     @GetMapping("/solicitantes")
     public ModelAndView listarSolicitantes() {
         ModelAndView mav = new ModelAndView("solicitante/lista");
@@ -54,11 +50,19 @@ public class AppController {
         return mav;
     }
 
-    // --- CADASTRO DE SOLICITANTE ---
+    // --- GESTÃO DE SOLICITANTE (CRIAR E EDITAR) ---
     @GetMapping("/solicitantes/novo")
     public ModelAndView exibirFormularioSolicitante() {
         ModelAndView mav = new ModelAndView("solicitante/form");
         mav.addObject("solicitante", new Solicitante());
+        return mav;
+    }
+
+    @GetMapping("/solicitantes/{id}/editar")
+    public ModelAndView exibirFormularioEdicaoSolicitante(@PathVariable Long id) {
+        Solicitante solicitante = solicitanteRepository.findById(id).orElseThrow(() -> new RuntimeException("Solicitante não encontrado!"));
+        ModelAndView mav = new ModelAndView("solicitante/form");
+        mav.addObject("solicitante", solicitante);
         return mav;
     }
 
@@ -68,7 +72,18 @@ public class AppController {
         return "redirect:/sucesso";
     }
 
-    // --- CADASTRO DE TÉCNICO ---
+    @PostMapping("/solicitantes/{id}/excluir")
+    public String excluirSolicitante(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            solicitanteRepository.deleteById(id);
+        } catch (DataIntegrityViolationException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Erro: Não é possível excluir o solicitante, pois ele está associado a um ou mais chamados.");
+            return "redirect:/solicitantes";
+        }
+        return "redirect:/solicitantes";
+    }
+
+    // --- GESTÃO DE TÉCNICO (CRIAR E EDITAR) ---
     @GetMapping("/tecnicos/novo")
     public ModelAndView exibirFormularioTecnico() {
         ModelAndView mav = new ModelAndView("tecnico/form");
@@ -76,10 +91,29 @@ public class AppController {
         return mav;
     }
 
+    @GetMapping("/tecnicos/{id}/editar")
+    public ModelAndView exibirFormularioEdicaoTecnico(@PathVariable Long id) {
+        Tecnico tecnico = tecnicoRepository.findById(id).orElseThrow(() -> new RuntimeException("Técnico não encontrado!"));
+        ModelAndView mav = new ModelAndView("tecnico/form");
+        mav.addObject("tecnico", tecnico);
+        return mav;
+    }
+
     @PostMapping("/tecnicos/salvar")
     public String salvarTecnico(@ModelAttribute Tecnico tecnico) {
         tecnicoRepository.save(tecnico);
         return "redirect:/sucesso";
+    }
+
+    @PostMapping("/tecnicos/{id}/excluir")
+    public String excluirTecnico(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            tecnicoRepository.deleteById(id);
+        } catch (DataIntegrityViolationException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Erro: Não é possível excluir o técnico, pois ele está associado a um ou mais chamados.");
+            return "redirect:/tecnicos";
+        }
+        return "redirect:/tecnicos";
     }
     
     // --- GESTÃO DE ORDEM DE SERVIÇO (OS) ---
@@ -100,15 +134,14 @@ public class AppController {
         return "redirect:/sucesso";
     }
     
-    // -- NOVOS MÉTODOS PARA VISUALIZAR, EDITAR E ATRIBUIR OS --
-
     @GetMapping("/os/{id}")
     public ModelAndView detalharOS(@PathVariable Long id) {
         ModelAndView mav = new ModelAndView("os/detalhes");
         OrdemDeServico os = ordemDeServicoRepository.findById(id).orElseThrow(() -> new RuntimeException("OS não encontrada!"));
         mav.addObject("os", os);
-        mav.addObject("tecnicos", tecnicoRepository.findAll()); // Lista de técnicos para o dropdown de atribuição
-        mav.addObject("prioridades", Prioridade.values()); // Lista de prioridades para o form de edição
+        mav.addObject("tecnicos", tecnicoRepository.findAll());
+        mav.addObject("prioridades", Prioridade.values());
+        mav.addObject("statusOptions", Status.values());
         return mav;
     }
 
@@ -126,12 +159,35 @@ public class AppController {
     @PostMapping("/os/{id}/atribuir-tecnico")
     public String atribuirTecnico(@PathVariable Long id, @RequestParam Long tecnicoId) {
         OrdemDeServico os = ordemDeServicoRepository.findById(id).orElseThrow(() -> new RuntimeException("OS não encontrada!"));
-        Tecnico tecnico = tecnicoRepository.findById(tecnicoId).orElse(null); // Permite desatribuir se selecionar uma opção vazia
+        Tecnico tecnico = tecnicoRepository.findById(tecnicoId).orElse(null);
         os.setTecnicoResponsavel(tecnico);
         ordemDeServicoRepository.save(os);
         return "redirect:/os/" + id;
     }
 
+    @PostMapping("/os/{id}/alterar-status")
+    public String alterarStatusOS(@PathVariable Long id, @RequestParam Status novoStatus) {
+        OrdemDeServico os = ordemDeServicoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("OS não encontrada!"));
+        os.setStatus(novoStatus);
+
+        if (novoStatus == Status.RESOLVIDA || novoStatus == Status.FECHADA) {
+            if (os.getDataDeFechamento() == null) {
+                os.setDataDeFechamento(LocalDateTime.now());
+            }
+        } else {
+            os.setDataDeFechamento(null);
+        }
+
+        ordemDeServicoRepository.save(os);
+        return "redirect:/os/" + id;
+    }
+
+    @PostMapping("/os/{id}/excluir")
+    public String excluirOS(@PathVariable Long id) {
+        ordemDeServicoRepository.deleteById(id);
+        return "redirect:/";
+    }
 
     // --- PÁGINA DE SUCESSO GENÉRICA ---
     @GetMapping("/sucesso")

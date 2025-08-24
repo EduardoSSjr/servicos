@@ -14,23 +14,30 @@
         </div>
         <table>
             <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Nível</th>
+                <th>Ações</th> <%-- Nova coluna --%>
+            </tr>
+        </thead>
+        <tbody>
+            <c:forEach var="tecnico" items="${tecnicos}">
                 <tr>
-                    <th>ID</th>
-                    <th>Nome</th>
-                    <th>Email</th>
-                    <th>Nível</th>
+                    <td>${tecnico.id}</td>
+                    <td>${tecnico.nome}</td>
+                    <td>${tecnico.email}</td>
+                    <td>${tecnico.nivel}</td>
+                    <td class="actions-cell">
+                        <a href="/tecnicos/${tecnico.id}/editar" class="btn-action btn-edit">Editar</a>
+                        <form action="/tecnicos/${tecnico.id}/excluir" method="post" onsubmit="return confirm('Tem certeza que deseja excluir?');">
+                            <button type="submit" class="btn-action btn-delete">Excluir</button>
+                        </form>
+                    </td>
                 </tr>
-            </thead>
-            <tbody>
-                <c:forEach var="tecnico" items="${tecnicos}">
-                    <tr>
-                        <td>${tecnico.id}</td>
-                        <td>${tecnico.nome}</td>
-                        <td>${tecnico.email}</td>
-                        <td>${tecnico.nivel}</td>
-                    </tr>
-                </c:forEach>
-            </tbody>
+            </c:forEach>
+        </tbody>
         </table>
     </div>
 </body>

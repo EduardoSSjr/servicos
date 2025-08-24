@@ -7,9 +7,10 @@
     <style>
         .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 900px; margin: auto; }
         .detail-card { background-color: white; padding: 2em; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .detail-card h2 { margin-top: 0; }
+        .detail-card h2, .detail-card h3 { margin-top: 0; color: #0056b3;}
         .info-item { margin-bottom: 1em; }
-        .info-item strong { display: block; color: #555; }
+        .info-item strong { display: block; color: #555; margin-bottom: 4px;}
+        hr { border: 0; height: 1px; background-color: #eee; margin: 2em 0; }
     </style>
 </head>
 <body>
@@ -30,12 +31,28 @@
                     ${os.tecnicoResponsavel.nome}
                 </c:if>
             </div>
+            <div class="info-item"><strong>Data de Abertura:</strong> ${os.dataDeAbertura}</div>
+            <div class="info-item"><strong>Data de Fechamento:</strong> ${os.dataDeFechamento}</div>
             <a href="/" class="back-link" style="margin-top: 20px;">Voltar ao Dashboard</a>
         </div>
 
         <div class="detail-card">
             <h2>Ações</h2>
             
+            <form action="/os/${os.id}/alterar-status" method="post" style="padding:0; border:none; box-shadow:none;">
+                <label for="novoStatus">Alterar Status:</label>
+                <select id="novoStatus" name="novoStatus">
+                    <c:forEach var="status" items="${statusOptions}">
+                        <option value="${status}" ${status == os.status ? 'selected' : ''}>
+                            ${status}
+                        </option>
+                    </c:forEach>
+                </select>
+                <button type="submit" style="margin-top:10px;">Salvar Status</button>
+            </form>
+            
+            <hr>
+
             <form action="/os/${os.id}/atribuir-tecnico" method="post" style="padding:0; border:none; box-shadow:none;">
                 <label for="tecnicoId">Atribuir Técnico:</label>
                 <select id="tecnicoId" name="tecnicoId">
@@ -49,7 +66,7 @@
                 <button type="submit">Salvar Técnico</button>
             </form>
             
-            <hr style="margin: 2em 0;">
+            <hr>
 
             <form action="/os/${os.id}/editar" method="post" style="padding:0; border:none; box-shadow:none;">
                 <h3>Editar Chamado</h3>
@@ -72,6 +89,14 @@
                     </c:forEach>
                 </select>
                 <button type="submit">Salvar Alterações</button>
+            </form>
+            
+            <hr>
+
+            <form action="/os/${os.id}/excluir" method="post" onsubmit="return confirm('Tem certeza que deseja excluir este chamado?');" style="padding:0; border:none; box-shadow:none;">
+                <h3>Excluir Chamado</h3>
+                <p>Esta ação não pode ser desfeita.</p>
+                <button type="submit" class="btn-delete">Excluir Permanentemente</button>
             </form>
         </div>
     </div>
